@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f2a37">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="OneBook - your whole EPUB library, served from a book on your shelf.">
+<title>OneBook</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="app.css">
+<script src="lib/jszip.min.js" defer></script>
+<script src="lib/epub.min.js" defer></script>
+<script src="app.js" defer></script>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></symbol>
+  <symbol id="i-left" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M4 20h16"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
+  <symbol id="i-toc" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></symbol>
+  <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M7 4h10a1 1 0 0 1 1 1v15l-6-4-6 4V5a1 1 0 0 1 1-1z"/></symbol>
+  <symbol id="i-bookmarks" viewBox="0 0 24 24"><path d="M9 3h9a1 1 0 0 1 1 1v13"/><path d="M5 7h9a1 1 0 0 1 1 1v13l-5.5-3.5L4 21V8a1 1 0 0 1 1-1z"/></symbol>
+  <symbol id="i-text" viewBox="0 0 24 24"><path d="M3 19l5-14 5 14M5 14h6M15 19l3.5-9 3.5 9M16.2 16h4.6"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="19" r="1.6" fill="currentColor"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2V4z"/><path d="M5 18a2 2 0 0 1 2-2h11"/></symbol>
+</svg>
+
+<!-- Library -->
+<div id="library" class="view">
+  <header class="topbar">
+    <div class="brand"><img src="icons/icon.svg" alt="" width="30" height="30"><span>OneBook</span></div>
+    <input id="search" class="search" type="search" placeholder="Search your library" aria-label="Search your library" autocomplete="off">
+    <div class="top-actions">
+      <button id="btnRefresh" class="icon-btn" title="Refresh" aria-label="Refresh"><svg class="ic"><use href="#i-refresh"/></svg></button>
+      <button id="btnUpload" class="btn primary" title="Upload books"><svg class="ic"><use href="#i-upload"/></svg><span class="hide-sm">Upload</span></button>
+      <button id="btnSettings" class="icon-btn" title="Settings" aria-label="Settings"><svg class="ic"><use href="#i-settings"/></svg></button>
+    </div>
+  </header>
+  <div class="statusbar">
+    <span id="connPill" class="pill">Starting</span>
+    <div class="storage">
+      <div class="meter"><div id="storageFill"></div></div>
+      <span id="storageText"></span>
+    </div>
+  </div>
+  <main class="shelf">
+    <div id="emptyState" class="empty hidden">
+      <svg class="ic big"><use href="#i-book"/></svg>
+      <h2 id="emptyTitle"></h2>
+      <p id="emptyText"></p>
+      <button id="emptyAction" class="btn primary hidden"></button>
+    </div>
+    <ul id="grid" class="grid"></ul>
+  </main>
+</div>
+
+<!-- Reader -->
+<div id="reader" class="view hidden">
+  <div id="viewer"></div>
+  <div id="readerLoading" class="reader-loading">Opening book...</div>
+  <button id="btnPrev" class="nav-arrow left" aria-label="Previous page"><svg class="ic"><use href="#i-left"/></svg></button>
+  <button id="btnNext" class="nav-arrow right" aria-label="Next page"><svg class="ic"><use href="#i-right"/></svg></button>
+  <div class="status-line"><span id="readerProgress"></span></div>
+  <div class="progress-track"><div id="progressFill"></div></div>
+
+  <header class="reader-top">
+    <button id="btnBack" class="icon-btn" aria-label="Back to library"><svg class="ic"><use href="#i-back"/></svg></button>
+    <div id="readerTitle" class="reader-title"></div>
+    <button id="btnToc" class="icon-btn" title="Contents" aria-label="Contents"><svg class="ic"><use href="#i-toc"/></svg></button>
+    <button id="btnMarks" class="icon-btn" title="Bookmarks" aria-label="Bookmarks"><svg class="ic"><use href="#i-bookmarks"/></svg></button>
+    <button id="btnMark" class="icon-btn" title="Bookmark this page" aria-label="Bookmark this page"><svg class="ic"><use href="#i-bookmark"/></svg></button>
+    <button id="btnDisplay" class="icon-btn" title="Display" aria-label="Display settings"><svg class="ic"><use href="#i-text"/></svg></button>
+  </header>
+
+  <aside id="panel" class="panel" aria-hidden="true">
+    <div class="panel-head">
+      <div class="tabs" role="tablist">
+        <button data-tab="toc" role="tab">Contents</button>
+        <button data-tab="marks" role="tab">Bookmarks</button>
+        <button data-tab="display" role="tab">Display</button>
+      </div>
+      <button id="btnPanelClose" class="icon-btn" aria-label="Close panel"><svg class="ic"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="panel-body">
+      <div data-pane="toc"><ul id="tocList" class="toc"></ul></div>
+      <div data-pane="marks">
+        <button id="btnAddMark" class="btn primary block"><svg class="ic"><use href="#i-bookmark"/></svg>Bookmark this page</button>
+        <ul id="markList" class="marks"></ul>
+      </div>
+      <div data-pane="display">
+        <div class="field"><span>Theme</span>
+          <div class="seg" id="segTheme"><button data-v="light">Light</button><button data-v="sepia">Sepia</button><button data-v="dark">Dark</button></div>
+        </div>
+        <div class="field"><span>Text size</span>
+          <div class="stepper"><button id="fontDown" aria-label="Smaller text">A-</button><span id="fontVal">100%</span><button id="fontUp" aria-label="Larger text">A+</button></div>
+        </div>
+        <div class="field"><span>Font</span>
+          <div class="seg" id="segFont"><button data-v="publisher">Book</button><button data-v="serif">Serif</button><button data-v="sans">Sans</button></div>
+        </div>
+        <label class="field wide-only"><span>Two pages on wide screens</span><input id="chkSpread" type="checkbox"></label>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- Dialogs -->
+<dialog id="dlgSettings">
+  <div class="dlg">
+    <header><h2>Settings</h2><button class="icon-btn" data-close aria-label="Close"><svg class="ic"><use href="#i-close"/></svg></button></header>
+    <section>
+      <h3>Your OneBook</h3>
+      <label class="input">Server address
+        <input id="setUrl" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://onebook.yourname.workers.dev">
+      </label>
+      <label class="input">Access token
+        <span class="pw">
+          <input id="setToken" type="password" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <button id="btnShowToken" type="button" class="icon-btn" aria-label="Show token"><svg class="ic"><use href="#i-eye"/></svg></button>
+        </span>
+      </label>
+      <p class="hint">Both are saved only in this browser.</p>
+      <div class="row">
+        <button id="btnTest" type="button" class="btn">Test connection</button>
+        <button id="btnSave" type="button" class="btn primary">Save</button>
+      </div>
+      <p id="setResult" class="result"></p>
+    </section>
+    <section id="deviceSection" class="hidden">
+      <h3>Device</h3>
+      <dl id="deviceInfo" class="kv"></dl>
+      <button id="btnLog" type="button" class="btn">Show device log</button>
+      <pre id="deviceLog" class="log hidden"></pre>
+    </section>
+    <section>
+      <h3>This browser</h3>
+      <p id="localUsage" class="hint"></p>
+      <button id="btnClearLocal" type="button" class="btn danger">Remove all downloads</button>
+    </section>
+  </div>
+</dialog>
+
+<dialog id="dlgUpload">
+  <div class="dlg">
+    <header><h2>Upload books</h2><button class="icon-btn" data-close aria-label="Close"><svg class="ic"><use href="#i-close"/></svg></button></header>
+    <label id="dropZone" class="drop">
+      <input id="fileInput" type="file" accept=".epub,application/epub+zip" multiple hidden>
+      <svg class="ic big"><use href="#i-upload"/></svg>
+      <strong>Choose EPUB files</strong>
+      <span>or drop them here (max 20 MB each)</span>
+    </label>
+    <ul id="uploadList" class="uploads"></ul>
+  </div>
+</dialog>
+
+<dialog id="dlgMenu">
+  <div class="dlg menu">
+    <header><h2 id="menuTitle"></h2><button class="icon-btn" data-close aria-label="Close"><svg class="ic"><use href="#i-close"/></svg></button></header>
+    <p id="menuSub" class="hint"></p>
+    <div id="menuItems" class="menu-items"></div>
+  </div>
+</dialog>
+
+<dialog id="dlgResume">
+  <div class="dlg">
+    <header><h2 id="resumeTitle">Where would you like to start?</h2></header>
+    <div id="resumeList" class="choices"></div>
+  </div>
+</dialog>
+
+<dialog id="dlgConfirm">
+  <div class="dlg small">
+    <p id="confirmText"></p>
+    <div class="row end">
+      <button id="confirmCancel" type="button" class="btn">Cancel</button>
+      <button id="confirmOk" type="button" class="btn primary"></button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="dlgPrompt">
+  <form id="promptForm" class="dlg small">
+    <label class="input"><span id="promptLabel"></span><input id="promptInput" type="text" maxlength="80" autocomplete="off"></label>
+    <div class="row end">
+      <button id="promptCancel" type="button" class="btn">Cancel</button>
+      <button type="submit" class="btn primary">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="busy" class="busy hidden" role="alertdialog" aria-live="polite">
+  <div class="busy-card">
+    <div id="busyText" class="busy-text"></div>
+    <div class="meter"><div id="busyFill"></div></div>
+    <div id="busySub" class="hint"></div>
+    <button id="busyCancel" type="button" class="btn">Cancel</button>
+  </div>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
